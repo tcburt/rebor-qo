@@ -1,0 +1,33 @@
+
+* Abstract for SPIE.DCS 2016, Quantum Information and Computation IX :noexport:
+
+** Analysis of Franson interference using ring-generated photons
+
+A correlated photon pair that is generated from a ring resonator via
+spontaneous four-wave mixing can serve as the input to another ring
+resonator serving as a Franson interferometer. A recent demonstration of
+entangling ring-generated bi-photons [Preble et al. Physical Review Applied
+2015] exhibited on-chip interference using a Mach-Zehnder device.  This
+work presents a spectral theory for the generated signal and idler pair,
+including properties that may be impressed on the pair by the pump
+photons. Coincidence parameters and phase properties of the output states
+from the generating ring characterize the input state to another ring
+resonator that acts as a Franson interferometer. Analysis of the Franson
+interferometric component is based on a study of Hong-Ou-Mandel manifolds
+in a single ring resonator [Hach, Preble, Elshaari, Alsing, and Fanto,
+Physical Review A 2014]. Behaviors of the interference signatures are
+explored in terms of design parameters of silicon photonics devices
+(e.g. ring-channel coupling), and with respect to experimental parameters
+(e.g. pump distribution and strength). 
+
+
+
+
+
+
+
+
+
+
+
+ 
