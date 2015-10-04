@@ -10,21 +10,21 @@ Command-line examples
 =====================
 
 Obtain the usage statement::
-  python CC101_FWM_detuning.py --help
+  python CCqo101_FWM_detuning.py --help
 Obtain programmer-level documentation::
-  pydoc CC101_FWM_detuning
+  pydoc CCqo101_FWM_detuning
 
 Compute detuning parameter::
-  python CC101_FWM_detuning.py --pumpFreq 1550e
+  python CCqo101_FWM_detuning.py --pumpFreq 1550e
 Same calculation, but showing that unambiguous abbreviations are permissible::
-  python CC101_FWM_detuning.py --CHG 0.25
+  python CCqo101_FWM_detuning.py --CHG 0.25
 
 Validate parameters (error for negative input)::
-  python CC101_FWM_detuning.py --CHG -0.25 --validate
+  python CCqo101_FWM_detuning.py --CHG -0.25 --validate
 Change the log level (debug) and refrain from validation::
-  python CC101_FWM_detuning.py --CHG -0.25 --no-validate -vv
+  python CCqo101_FWM_detuning.py --CHG -0.25 --no-validate -vv
 Change the log file::
-  python CC101_FWM_detuning.py --CHG -0.25 --log-file exp01.txt
+  python CCqo101_FWM_detuning.py --CHG -0.25 --log-file exp01.txt
 
 Data
 ====
@@ -126,7 +126,7 @@ def validateParameters(pump1, signal, pump2, idler):
 
     Parameters
     ----------
-    (See description of parameters and keywords in calc101_FWM_detuning)
+    (See description of parameters and keywords in calcqo101_FWM_detuning)
 
     Returns
     -------
@@ -142,7 +142,7 @@ def validateParameters(pump1, signal, pump2, idler):
 
     Examples
     --------
-    >>> import CC101_FWM_detuning as emr
+    >>> import CCqo101_FWM_detuning as emr
     >>> emr.validateParameters(CHGTHISVAR = -6.2)
     """
 
@@ -207,7 +207,7 @@ def appl_setupLog(level=logging.WARNING,
     Examples
     --------
     >>> # Setup for examples
-    >>> import CC101_FWM_detuning as emr
+    >>> import CCqo101_FWM_detuning as emr
     >>> import logging
 
     >>> # Warning messages and above go to STDOUT with datetime+level prefix.
@@ -237,7 +237,7 @@ def appl_setupLog(level=logging.WARNING,
     lgr.addHandler(ch)
     if logFile is not None: lgr.addHandler(fh)
 
-def calc101_FWM_detuning(pump1, signal, pump2 = None, idler = None):
+def calcqo101_FWM_detuning(pump1, signal, pump2 = None, idler = None):
 
     """Calculate the four-wave mixing detuning between output and input frequencies.
 
@@ -275,16 +275,16 @@ def calc101_FWM_detuning(pump1, signal, pump2 = None, idler = None):
     Examples
     --------
     # Setup for examples
-    >>> import CC101_FWM_detuning as emr
+    >>> import CCqo101_FWM_detuning as emr
 
     # Positional call
-    >>> emr.calc101_FWM_detuning(100, 110)
+    >>> emr.calcqo101_FWM_detuning(100, 110)
 
     # Keyword call (same as above)
-    >>> emr.calc101_FWM_detuning(signal=110, pump1=100)
+    >>> emr.calcqo101_FWM_detuning(signal=110, pump1=100)
 
     # Mixed-style call (explicit values for optional arguments)
-    >>> emr.calc101_FWM_detuning(100, 110, pump2=230, idler=250)
+    >>> emr.calcqo101_FWM_detuning(100, 110, pump2=230, idler=250)
     """
 
     # Set optional arguments if necessary
@@ -302,7 +302,7 @@ if '__main__' == __name__:
     import pprint
     pp = pprint.PrettyPrinter(indent=2, width=50)
 
-    import CC101_FWM_detuning as emr
+    import CCqo101_FWM_detuning as emr
 
     # Create the option object
     #  - Help option (-h, --help) included by default 
@@ -356,7 +356,7 @@ if '__main__' == __name__:
 
     argp.add_argument(
         '--log-file', 
-        default='CC101_FWM_detuning.log',
+        default='CCqo101_FWM_detuning.log',
         dest='log_file', action='store',
         help="File for log messages",
         metavar = 'fname')
@@ -416,27 +416,27 @@ if '__main__' == __name__:
                     signal = signal,
                     idler  = idler)
             except RuntimeWarning as e:
-                msg = 'Dubious inputs for CC101_FWM_detuning.'
+                msg = 'Dubious inputs for CCqo101_FWM_detuning.'
                 lgr.warn(str(e))
                 pass
             except ValueError as e:
-                msg = 'Invalid value for CC101_FWM_detuning.'
+                msg = 'Invalid value for CCqo101_FWM_detuning.'
                 lgr.error(str(e))
                 raise
             except Exception:
-                msg = 'Error in CC101_FWM_detuning.'
+                msg = 'Error in CCqo101_FWM_detuning.'
                 lgr.error(msg)
                 raise
 
         # Calculate
-        detuning = emr.calc101_FWM_detuning(
+        detuning = emr.calcqo101_FWM_detuning(
             pump1  = pump1,
             pump2  = pump2,
             signal = signal,
             idler  = idler
         )
         msg = ''
-        msg += ' CC101_FWM_detuning outputs' + os.linesep
+        msg += ' CCqo101_FWM_detuning outputs' + os.linesep
         msg += '  sum frequency outputs [rad s^(-1)] = {}'.format(signal+idler) + os.linesep
         msg += '  sum frequency inputs  [rad s^(-1)] = {}'.format(pump1+pump2) + os.linesep
         msg += '  omega_detuned [rad s^(-1)] = {}'.format(detuning) + os.linesep
