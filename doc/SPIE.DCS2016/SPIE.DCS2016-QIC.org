@@ -1,11 +1,11 @@
 
 * Abstract for SPIE.DCS 2016, Quantum Information and Computation IX :noexport:
 
-** Analysis of Franson interference using ring-generated photons
+** Technical abstract (<=250 word): Analysis of Franson interference using ring-generated photons
 
 A correlated photon pair that is generated from a ring resonator via
 spontaneous four-wave mixing can serve as the input to another ring
-resonator serving as a Franson interferometer. A recent demonstration of
+resonator acting as a Franson interferometer. A recent demonstration of
 entangling ring-generated bi-photons [Preble et al. Physical Review Applied
 2015] exhibited on-chip interference using a Mach-Zehnder device.  This
 work presents a spectral theory for the generated signal and idler pair,
@@ -21,12 +21,30 @@ explored in terms of design parameters of silicon photonics devices
 (e.g. pump distribution and strength). 
 
 
+** Online abstract (<=100 word): Analysis of Franson interference using ring-generated photons
+
+A correlated photon pair that is generated from a ring resonator via
+spontaneous four-wave mixing can serve as the input to another ring
+resonator acting as a Franson interferometer.  This work presents a
+spectral theory for the generated signal and idler pair, including
+properties that may be impressed on the pair by the pump
+photons. Coincidence parameters and phase properties of the output states
+from the generating ring characterize the input state to another ring
+resonator. Behaviors of the interference signatures are explored in terms
+of design parameters of silicon photonics devices and with respect to
+experimental parameters.
 
 
-
-
-
-
+** Submission and Communication
+#+BEGIN_QUOTE
+Paper Title:	Analysis of Franson interference using ring-generated photons
+Paper No.	SI127-16
+Tracking No.	SI16C-SI127-16
+Program Coordinator:	Kaiser, Stephanie (StephanieK@spie.org)
+PRESENTATION
+Status: Your submission is available for chair review. You will be notified
+        by email, by 15 December 2015. 
+#+END_QUOTE
 
 
 
