@@ -14,13 +14,15 @@ Obtain the usage statement::
 Obtain programmer-level documentation::
   pydoc CCqo101_FWM_detuning
 
-Compute detuning parameter::
-  python CCqo101_FWM_detuning.py --pumpFreq 1550e
+Compute detuning parameter using only required parameters::
+  python CCqo101_FWM_detuning.py --pump1 1.22e15 --signal 1.92e15
+Compute detuning parameter using all calculation parameters::
+  python CCqo101_FWM_detuning.py --pump1 1.22e15 --signal 1.92e15 --pump2 1.00e15 --idler 2.00e15
 Same calculation, but showing that unambiguous abbreviations are permissible::
-  python CCqo101_FWM_detuning.py --CHG 0.25
+  python CCqo101_FWM_detuning.py --pump1 1.22e15 --sig 1.92e15 --pump2 1.00e15 --idl 2.00e15
 
 Validate parameters (error for negative input)::
-  python CCqo101_FWM_detuning.py --CHG -0.25 --validate
+  python CCqo101_FWM_detuning.py ---pump1 1.22e15 --s 1.92e15 --validate
 Change the log level (debug) and refrain from validation::
   python CCqo101_FWM_detuning.py --CHG -0.25 --no-validate -vv
 Change the log file::
@@ -116,11 +118,11 @@ paramDefns = {
         }
 }
 
-def validateParameters(pump1, signal, pump2, idler):
+def validateParameters(**kwargs):
     """Validate input parameters, raising an exception for invalid and dubious values.
 
     Error checks:
-      * CHGTHISVAR > 0 and CHGTHISVAR <=1
+      * pump1, pump2, signal, idler >= 0
     Warning checks:
       * None
 
@@ -138,20 +140,29 @@ def validateParameters(pump1, signal, pump2, idler):
 
     See Also
     --------
+    import collections (OrderedDict)
     logging (lgr object is a precondition)
 
     Examples
     --------
-    >>> import CCqo101_FWM_detuning as emr
-    >>> emr.validateParameters(CHGTHISVAR = -6.2)
+    Setup for examples
+    >>> import CCqo101_FWM_detuning as CCqo101
+    >>> CCqo101.validateParameters(pump1=-1)
     """
 
-    CHGTHISVAR = kwargs['CHGTHISVAR']
+    from collections import OrderedDict
+
+    pump1 = kwargs.get("pump1")
+    pump2 = kwargs.get("pump2")
+    signal = kwargs.get("signal")
+    idler = kwargs.get("idler")
 
     # Log the inputs
     msg = ''
     msg += 'Inputs for validation:' + os.linesep
-    msg += '  CHGTHISVAR = %f'%(CHGTHISVAR)
+    print(kwargs)
+    for k,v in kwargs.items():
+        msg+= "  k = {}".format(v) + os.linesep
     lgr.debug(msg)
 
     # Set flag variables and messages for errors (err, eMsg) and warnings (wrn, wMsg)
@@ -160,11 +171,20 @@ def validateParameters(pump1, signal, pump2, idler):
     eMsg = ''
     wMsg = ''
 
-    # range-check: 0 < CHGTHISVAR <=1
-    if (CHGTHISVAR <= 0) or (CHGTHISVAR > 1): 
-        eMsg+='Expected: 0 < [CHGTHISVAR] <=1'
-        err=True
+    # range-check: pump1 >= 0
+    # Preserve order of the checking for consistent behavior of message
+    checkGEzero = OrderedDict([("pump1", pump1), ("pump2", pump2), ("signal", signal), ("idler", idler)])
+    for k,v in checkGEzero.items():
+        if v and (v < 0):
+            eMsg+= "Range check error:" + os.linesep
+            eMsg+= "  Expected {} >= 0".format(k) + os.linesep
+            eMsg+= "  Received {} = {}".format(k,v) + os.linesep
+            err=True
 
+    if err and wrn:   
+        lgr.warn(wMsg)   
+        lgr.error(eMsg)
+        raise ValueError(eMsg+wMsg)
     if wrn: 
         lgr.warn(wMsg)
         raise RuntimeWarning(wMsg)
