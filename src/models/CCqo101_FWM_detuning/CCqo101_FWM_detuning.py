@@ -326,21 +326,26 @@ if '__main__' == __name__:
 
     # Create the option object
     #  - Help option (-h, --help) included by default 
-    #  - Usage statement included by default
+    #  - Usage statement (help) will be included so as to preseve order
     argp = argparse.ArgumentParser(
         description='Compute four-wave mixing detuning frequency',
-        epilog='Unambiguous option abbreviations are permitted.')
+        epilog='Unambiguous option abbreviations are permitted.',
+        add_help=False
+    )
+    # Add Required arguments group
+    reqArgs = argp.add_argument_group("Required arguments")
+    
     # Add options
     # ===========
 
-    argp.add_argument(
+    reqArgs.add_argument(
         '--pump1', 
         type=float, required=True,
         dest='pump1', action='store',
         help="Pump 1 angular frequency [rad s^{-1}]",
         metavar='omega_0_1'
         )
-    argp.add_argument(
+    reqArgs.add_argument(
         '--signal', 
         type=float, required=True,
         dest='signal', action='store',
@@ -396,6 +401,12 @@ if '__main__' == __name__:
         '--Version', 
         action='version', version=vMsg,
         help="Print version and exit"
+        )
+    # help
+    argp.add_argument(
+        '-h-', '--help', 
+        action='help', 
+        help="Show usage and exit"
         )
 
     # Parse options and instantiate object
