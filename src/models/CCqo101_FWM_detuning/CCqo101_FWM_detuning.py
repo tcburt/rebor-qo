@@ -14,17 +14,19 @@ Obtain the usage statement::
 Obtain programmer-level documentation::
   pydoc CCqo101_FWM_detuning
 
-Compute detuning parameter::
-  python CCqo101_FWM_detuning.py --pumpFreq 1550e
+Compute detuning parameter using only required parameters::
+  python CCqo101_FWM_detuning.py --pump1 1.22e15 --signal 1.92e15
+Compute detuning parameter using all calculation parameters::
+  python CCqo101_FWM_detuning.py --pump1 1.22e15 --signal 1.92e15 --pump2 1.00e15 --idler 2.00e15
 Same calculation, but showing that unambiguous abbreviations are permissible::
-  python CCqo101_FWM_detuning.py --CHG 0.25
+  python CCqo101_FWM_detuning.py --pump1 1.22e15 --sig 1.92e15 --pump2 1.00e15 --idl 2.00e15
 
 Validate parameters (error for negative input)::
-  python CCqo101_FWM_detuning.py --CHG -0.25 --validate
+  python CCqo101_FWM_detuning.py ---pump1 1.22e15 --s 1.92e15 --validate
 Change the log level (debug) and refrain from validation::
-  python CCqo101_FWM_detuning.py --CHG -0.25 --no-validate -vv
-Change the log file::
-  python CCqo101_FWM_detuning.py --CHG -0.25 --log-file exp01.txt
+  python CCqo101_FWM_detuning.py --pump1 1.22e15 --s 1.92e15 --no-validate -vvv
+Change the log file (DEBUG level to ensure content)::
+  python CCqo101_FWM_detuning.py --pump1 1.22e15 --s 1.92e15 -vvv --log-file exp01.log
 
 Data
 ====
@@ -49,18 +51,21 @@ and identify information such as copyright, author, etc.
 
 HISTORY
 =======
-1.0b1
-    * [15 Aug 2015 : Timothy C. Burt] 
-        * Genesis which blemishes
+1.0b1 [15 Aug 2015 : Timothy C. Burt] 
+    * Genesis which blemishes
+1.0 [01 Oct 2015 : Timothy C. Burt]
+    * Initial release
+1.0.1 [01 Oct 2015 : Timothy C. Burt]
+    * Fixed bug brought on by suppressing default argument creation
 
 """
 
-__version__ = '1.0b1'
+__version__ = '1.0'
 
 __copyright__ = "Timothy C. Burt"
 __author__ = "TC Burt"
 __credits__ = [""]
-__license__ = "FreeBSD License"
+__license__ = "MIT License"
 __maintainer__ = "Timothy C. Burt"
 __email__ = "rketburt@gmail.com"
 __status__ = "Development"
@@ -116,11 +121,11 @@ paramDefns = {
         }
 }
 
-def validateParameters(pump1, signal, pump2, idler):
+def validateParameters(**kwargs):
     """Validate input parameters, raising an exception for invalid and dubious values.
 
     Error checks:
-      * CHGTHISVAR > 0 and CHGTHISVAR <=1
+      * pump1, pump2, signal, idler >= 0
     Warning checks:
       * None
 
@@ -138,20 +143,29 @@ def validateParameters(pump1, signal, pump2, idler):
 
     See Also
     --------
+    import collections (OrderedDict)
     logging (lgr object is a precondition)
 
     Examples
     --------
-    >>> import CCqo101_FWM_detuning as emr
-    >>> emr.validateParameters(CHGTHISVAR = -6.2)
+    Setup for examples
+    >>> import CCqo101_FWM_detuning as CCqo101
+    >>> CCqo101.validateParameters(pump1=-1)
     """
 
-    CHGTHISVAR = kwargs['CHGTHISVAR']
+    from collections import OrderedDict
+
+    pump1 = kwargs.get("pump1")
+    pump2 = kwargs.get("pump2")
+    signal = kwargs.get("signal")
+    idler = kwargs.get("idler")
 
     # Log the inputs
     msg = ''
     msg += 'Inputs for validation:' + os.linesep
-    msg += '  CHGTHISVAR = %f'%(CHGTHISVAR)
+    print(kwargs)
+    for k,v in kwargs.items():
+        msg+= "  k = {}".format(v) + os.linesep
     lgr.debug(msg)
 
     # Set flag variables and messages for errors (err, eMsg) and warnings (wrn, wMsg)
@@ -160,11 +174,20 @@ def validateParameters(pump1, signal, pump2, idler):
     eMsg = ''
     wMsg = ''
 
-    # range-check: 0 < CHGTHISVAR <=1
-    if (CHGTHISVAR <= 0) or (CHGTHISVAR > 1): 
-        eMsg+='Expected: 0 < [CHGTHISVAR] <=1'
-        err=True
+    # range-check: pump1 >= 0
+    # Preserve order of the checking for consistent behavior of message
+    checkGEzero = OrderedDict([("pump1", pump1), ("pump2", pump2), ("signal", signal), ("idler", idler)])
+    for k,v in checkGEzero.items():
+        if v and (v < 0):
+            eMsg+= "Range check error:" + os.linesep
+            eMsg+= "  Expected {} >= 0".format(k) + os.linesep
+            eMsg+= "  Received {} = {}".format(k,v) + os.linesep
+            err=True
 
+    if err and wrn:   
+        lgr.warn(wMsg)   
+        lgr.error(eMsg)
+        raise ValueError(eMsg+wMsg)
     if wrn: 
         lgr.warn(wMsg)
         raise RuntimeWarning(wMsg)
@@ -306,35 +329,44 @@ if '__main__' == __name__:
 
     # Create the option object
     #  - Help option (-h, --help) included by default 
-    #  - Usage statement included by default
+    #  - Usage statement (help) will be included so as to preseve order
     argp = argparse.ArgumentParser(
-        description='Compute four-wave mixing detuning frequency',
-        epilog='Unambiguous option abbreviations are permitted.')
+        description='Compute detuning frequency in four-wave mixing',
+        epilog='Unambiguous option abbreviations are permitted.',
+        add_help=False,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        argument_default=argparse.SUPPRESS
+    )
+    # Instantiate required, optional, and informational arguments group
+    reqArgs = argp.add_argument_group("Required arguments")
+    optArgs = argp.add_argument_group("Optional arguments")
+    infArgs = argp.add_argument_group("Informational arguments")
+    
     # Add options
     # ===========
 
-    argp.add_argument(
+    reqArgs.add_argument(
         '--pump1', 
         type=float, required=True,
         dest='pump1', action='store',
         help="Pump 1 angular frequency [rad s^{-1}]",
         metavar='omega_0_1'
         )
-    argp.add_argument(
+    reqArgs.add_argument(
         '--signal', 
         type=float, required=True,
         dest='signal', action='store',
         help="Output 1 signal angular frequency [rad s^{-1}]",
         metavar='omega_1'
         )
-    argp.add_argument(
+    optArgs.add_argument(
         '--pump2', 
         type=float, required=False,
         dest='pump2', action='store',
         help="Pump 2 angular frequency [rad s^{-1}] (default=pump1)",
         metavar='omega_0_2'
         )
-    argp.add_argument(
+    optArgs.add_argument(
         '--idler', 
         type=float, required=False,
         dest='idler', action='store',
@@ -342,40 +374,48 @@ if '__main__' == __name__:
         metavar='omega_2'
         )
 
-    argp.add_argument(
+    optArgs.add_argument(
         '--validate', 
         dest='validate', action='store_true',
+        default=False,
         help="Validate parameters"
         )
-    argp.add_argument(
+    optArgs.add_argument(
         '--no-validate',
-        default=False,
+        default=True,
         dest='validate', action='store_false',
         help="Do not validate parameters"
         )
 
-    argp.add_argument(
+    optArgs.add_argument(
         '--log-file', 
         default='CCqo101_FWM_detuning.log',
         dest='log_file', action='store',
         help="File for log messages",
         metavar = 'fname')
-    argp.add_argument(
+    optArgs.add_argument(
         '--log-entry-format', 
         default='%(asctime)s %(levelname)s [%(filename)s:%(funcName)s] %(message)s',
         dest='log_entry_format', action='store',
         help="Formate for log messages",
         metavar = 'F')
-    argp.add_argument(
+    infArgs.add_argument(
         '-v', '--verbose', 
         dest='verbose', action='count',
+        default = 0,
         help="Increase verbosity (-v=WARNING, -vv=INFO, -vvv=DEBUG, -vvv(v+)=DEBUG)")
 
     vMsg = '%s version %s'%(__file__, __version__)
-    argp.add_argument(
+    infArgs.add_argument(
         '--Version', 
         action='version', version=vMsg,
         help="Print version and exit"
+        )
+    # help
+    infArgs.add_argument(
+        '-h', '--help', 
+        action='help', 
+        help="Show usage and exit"
         )
 
     # Parse options and instantiate object
@@ -383,9 +423,9 @@ if '__main__' == __name__:
     args = argp.parse_args()
 
     # Set defaults for the optional frequencies
-    if not args.pump2: 
+    if not hasattr(args, "pump2"): 
         args.pump2 = args.pump1
-    if not args.idler: 
+    if not hasattr(args, "idler"): 
         args.idler = args.signal
 
     # Initialize logging
