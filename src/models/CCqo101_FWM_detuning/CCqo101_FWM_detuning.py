@@ -24,9 +24,9 @@ Same calculation, but showing that unambiguous abbreviations are permissible::
 Validate parameters (error for negative input)::
   python CCqo101_FWM_detuning.py ---pump1 1.22e15 --s 1.92e15 --validate
 Change the log level (debug) and refrain from validation::
-  python CCqo101_FWM_detuning.py --CHG -0.25 --no-validate -vv
-Change the log file::
-  python CCqo101_FWM_detuning.py --CHG -0.25 --log-file exp01.txt
+  python CCqo101_FWM_detuning.py --pump1 1.22e15 --s 1.92e15 --no-validate -vvv
+Change the log file (DEBUG level to ensure content)::
+  python CCqo101_FWM_detuning.py --pump1 1.22e15 --s 1.92e15 -vvv --log-file exp01.log
 
 Data
 ====
@@ -51,18 +51,19 @@ and identify information such as copyright, author, etc.
 
 HISTORY
 =======
-1.0b1
-    * [15 Aug 2015 : Timothy C. Burt] 
-        * Genesis which blemishes
+1.0b1 [15 Aug 2015 : Timothy C. Burt] 
+    * Genesis which blemishes
+1.0 [01 Oct 2015 : Timothy C. Burt]
+    * Initial release
 
 """
 
-__version__ = '1.0b1'
+__version__ = '1.0'
 
 __copyright__ = "Timothy C. Burt"
 __author__ = "TC Burt"
 __credits__ = [""]
-__license__ = "FreeBSD License"
+__license__ = "MIT License"
 __maintainer__ = "Timothy C. Burt"
 __email__ = "rketburt@gmail.com"
 __status__ = "Development"
@@ -328,12 +329,16 @@ if '__main__' == __name__:
     #  - Help option (-h, --help) included by default 
     #  - Usage statement (help) will be included so as to preseve order
     argp = argparse.ArgumentParser(
-        description='Compute four-wave mixing detuning frequency',
+        description='Compute detuning frequency in four-wave mixing',
         epilog='Unambiguous option abbreviations are permitted.',
-        add_help=False
+        add_help=False,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        argument_default=argparse.SUPPRESS
     )
-    # Add Required arguments group
+    # Instantiate required, optional, and informational arguments group
     reqArgs = argp.add_argument_group("Required arguments")
+    optArgs = argp.add_argument_group("Optional arguments")
+    infArgs = argp.add_argument_group("Informational arguments")
     
     # Add options
     # ===========
@@ -352,14 +357,14 @@ if '__main__' == __name__:
         help="Output 1 signal angular frequency [rad s^{-1}]",
         metavar='omega_1'
         )
-    argp.add_argument(
+    optArgs.add_argument(
         '--pump2', 
         type=float, required=False,
         dest='pump2', action='store',
         help="Pump 2 angular frequency [rad s^{-1}] (default=pump1)",
         metavar='omega_0_2'
         )
-    argp.add_argument(
+    optArgs.add_argument(
         '--idler', 
         type=float, required=False,
         dest='idler', action='store',
@@ -367,44 +372,45 @@ if '__main__' == __name__:
         metavar='omega_2'
         )
 
-    argp.add_argument(
+    optArgs.add_argument(
         '--validate', 
         dest='validate', action='store_true',
+        default=False,
         help="Validate parameters"
         )
-    argp.add_argument(
+    optArgs.add_argument(
         '--no-validate',
-        default=False,
+        default=True,
         dest='validate', action='store_false',
         help="Do not validate parameters"
         )
 
-    argp.add_argument(
+    optArgs.add_argument(
         '--log-file', 
         default='CCqo101_FWM_detuning.log',
         dest='log_file', action='store',
         help="File for log messages",
         metavar = 'fname')
-    argp.add_argument(
+    optArgs.add_argument(
         '--log-entry-format', 
         default='%(asctime)s %(levelname)s [%(filename)s:%(funcName)s] %(message)s',
         dest='log_entry_format', action='store',
         help="Formate for log messages",
         metavar = 'F')
-    argp.add_argument(
+    infArgs.add_argument(
         '-v', '--verbose', 
         dest='verbose', action='count',
         help="Increase verbosity (-v=WARNING, -vv=INFO, -vvv=DEBUG, -vvv(v+)=DEBUG)")
 
     vMsg = '%s version %s'%(__file__, __version__)
-    argp.add_argument(
+    infArgs.add_argument(
         '--Version', 
         action='version', version=vMsg,
         help="Print version and exit"
         )
     # help
-    argp.add_argument(
-        '-h-', '--help', 
+    infArgs.add_argument(
+        '-h', '--help', 
         action='help', 
         help="Show usage and exit"
         )
