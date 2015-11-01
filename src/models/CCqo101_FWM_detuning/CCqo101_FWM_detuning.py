@@ -55,6 +55,8 @@ HISTORY
     * Genesis which blemishes
 1.0 [01 Oct 2015 : Timothy C. Burt]
     * Initial release
+1.0.1 [01 Oct 2015 : Timothy C. Burt]
+    * Fixed bug brought on by suppressing default argument creation
 
 """
 
@@ -400,6 +402,7 @@ if '__main__' == __name__:
     infArgs.add_argument(
         '-v', '--verbose', 
         dest='verbose', action='count',
+        default = 0,
         help="Increase verbosity (-v=WARNING, -vv=INFO, -vvv=DEBUG, -vvv(v+)=DEBUG)")
 
     vMsg = '%s version %s'%(__file__, __version__)
@@ -420,9 +423,9 @@ if '__main__' == __name__:
     args = argp.parse_args()
 
     # Set defaults for the optional frequencies
-    if not args.pump2: 
+    if not hasattr(args, "pump2"): 
         args.pump2 = args.pump1
-    if not args.idler: 
+    if not hasattr(args, "idler"): 
         args.idler = args.signal
 
     # Initialize logging
