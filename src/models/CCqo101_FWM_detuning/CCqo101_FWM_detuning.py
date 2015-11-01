@@ -57,10 +57,12 @@ HISTORY
     * Initial release
 1.0.1 [01 Oct 2015 : Timothy C. Burt]
     * Fixed bug brought on by suppressing default argument creation
+1.0.2 [01 Oct 2015 : Timothy C. Burt]
+    * Fixed version (that's going to be a pain!)
 
 """
 
-__version__ = '1.0'
+__version__ = '1.0.2'
 
 __copyright__ = "Timothy C. Burt"
 __author__ = "TC Burt"
