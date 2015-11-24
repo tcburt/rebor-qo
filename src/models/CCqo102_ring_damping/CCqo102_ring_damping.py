@@ -1,29 +1,47 @@
 """Obtain a damping parameter for a ring coupled to one or more loss channels
 
-This module computes unadulterated codswallop wrapped in a bad pun.  
-A fraction in the range (0, 1] is used to obtain a piece of pi, and 
-also used to decide whether to tan or sine the piece. No good could 
-come from the result.
+A ring resonator can be coupled to one or more channels, each with its own
+velocity.  From the perspective of the ring resonator each channel
+constitutes a loss to that path and the total effective damping (loss) is
+the sum of all path losses.  
 
 Command-line examples
 =====================
-
+Getting help
+------------
 Obtain the usage statement::
   python CCqo102_ring_damping.py --help
+
 Obtain programmer-level documentation::
   pydoc CCqo102_ring_damping
 
-Muck with the (0.25) piece of pi::
-  python CCqo102_ring_damping.py --CHGTHISVAR 0.25
-Same calculation, but showing that unambiguous abbreviations are permissible::
-  python CCqo102_ring_damping.py --CHG 0.25
+Execute module tests that are embedded in docstrings
+  python -m doctest CCqo102_ring_damping.py 
 
-Validate parameters (error for negative input)::
-  python CCqo102_ring_damping.py --CHG -0.25 --validate
-Change the log level (debug) and refrain from validation::
-  python CCqo102_ring_damping.py --CHG -0.25 --no-validate -vv
-Change the log file::
-  python CCqo102_ring_damping.py --CHG -0.25 --log-file exp01.txt
+Calculations
+------------
+Single-channel damping::
+  python CCqo102_ring_damping.py --couplings 12.0 --velocities 3.0
+
+Same as above but with abbreviated option names::
+  python CCqo102_ring_damping.py --coup 12.0 --vel 3.0
+
+Multi-channel damping, all with the same velocity::
+  python CCqo102_ring_damping.py --coup 12.0 20.0 --vel 2.0
+
+Multi-channel damping, each with its own velocity::
+  python CCqo102_ring_damping.py --coup 12.0 20.0 --vel 3.0 4.0
+
+
+Calculations with options
+-------------------------
+Display debugging information::
+  python CCqo102_ring_damping.py --coup 12.0 20.0 --vel 3.0 4.0 -vvv
+Validate calculation inputs (INVALID negative values of coupling and velocity)::
+  python CCqo102_ring_damping.py --coup -12.0 20.0 --vel 3.0 -4.0 --validate
+Validate calculation inputs (INVALID mismatch between coupling and velocity shapes)::
+  python CCqo102_ring_damping.py --coup 12.0 20.0 --vel 3.0 4.0 5.0 --validate
+
 
 Data
 ====
@@ -48,26 +66,19 @@ and identify information such as copyright, author, etc.
 
 HISTORY
 =======
-pre-1.2.4a124 
-    * [19 Jan 2015 : Timothy C. Burt]
-        * All version information before v1.2.4a124 has been lost since
-          the previous developer did not maintain a changelog in the file,
-          but kept exclusively in ClearCase commit logs which are now
-          completely unrecoverable.
-1.2.4a124
-    * [03 Mar 2015 : Timothy C. Burt] 
-        * Calculation method and stubs for next version
+1.0b1 [02 Nov 2015 : Timothy C. Burt] 
+    * Genesis with blemishes
 
 """
 
-__version__ = '1.2.4a124'
+__version__ = '1.0b1'
 
-__copyright__ = "Copyright 2xxx, Exelis Geospatial Systems"
-__author__ = "Tim Plate"
-__credits__ = ["Earl E. Kohder", "N. G. Niirs"]
-__license__ = "Exelis GS"
-__maintainer__ = "Priya Serrvar"
-__email__ = "priya.serrvar@exelisinc.com"
+__copyright__ = "Copyright 2015, Timothy C. Burt"
+__author__ = "Timothy C. Burt"
+__credits__ = []
+__license__ = "MIT"
+__maintainer__ = "Timothy C. Burt"
+__email__ = "rketburt@gmail.com"
 __status__ = "Development"
 
 import sys
@@ -79,28 +90,36 @@ import numpy as np
 lgr = logging.getLogger('__main__')
 
 paramDefns = {
-    'CHGTHISVAR':{
-        'desc':'A parameter',
-        'valrange':'(0, 1]',
+    'couplings':{
+        'desc':'Coupling constant for each channel',
+        'valrange':'[0, inf)',
         'default': '0.0',
-        'datatype':'float',
-        'units':'m',
+        'datatype':'float (scalar or array)',
+        'units':'(rad s^{-1})^{1/2}',
         'flow':'input'
         },
-    'intrmdB':{
-        'desc':'A neat, but intermediate, result',
-        'valrange':'(-\infty, \infty)',
+    'velocities':{
+        'desc':'Speed of light for each channel',
+        'valrange':'[0, inf)',
         'default': '0.0',
-        'datatype':'float',
-        'units':'J m',
+        'datatype':'float (scalar or array)',
+        'units':'rad s^{-1}',
+        'flow':'input'
+        },
+    'path_losses':{
+        'desc':'Damping value for each channel',
+        'valrange':'[0, inf)',
+        'default': '0.0',
+        'datatype':'float (scalar or array)',
+        'units':'1',
         'flow':'intermediate output'
         },
-    'finC':{
-        'desc':'Culmination value of the calculation',
-        'valrange':'(-\infty, \infty)',
+    'damping':{
+        'desc':'Total damping coefficient',
+        'valrange':'[0, inf)',
         'default': '0.0',
         'datatype':'float',
-        'units':'s m^-1',
+        'units':'1',
         'flow':'output'
         }
 }
@@ -141,27 +160,44 @@ def validateParameters(**kwargs):
 
     Examples
     --------
-    Setup for examples
-    >>> import CCqo102_ring_damping as CCqo102
+    Setup for examples (Use level=1 for DEBUG)
+    >>> appl_setupLog(level=5)
 
     Validating just couplings (VALID)
-    >>> CCqo102.validateParameters(couplings = [1,2,3])
-
-    Validating just couplings (INVALID: negative values)
-    >>> CCqo102.validateParameters(couplings = [-1,2,-3])
+    >>> validateParameters(couplings = [1,2,3])
 
     Validating all inputs (VALID)
-    >>> CCqo102.validateParameters(velocities = [4,5,6], couplings = [1,2,3])
+    >>> validateParameters(velocities = [4,5,6], couplings = [1,2,3])
 
-    Validating all inputs with different shapes (VALID)
-    >>> CCqo102.validateParameters(velocities = 6, couplings = [1,2,3])
+    Validating all inputs with different but compatible shapes (VALID)
+    >>> validateParameters(velocities = 6, couplings = [1,2,3])
+
+    Validating couplings and velocities (INVALID: negative values)
+    >>> validateParameters(couplings = [-1,2,-3], velocities = [-9,-8,7])
+    Traceback (most recent call last):
+        ...
+    ValueError: All coupling values must be >=0
+    Bad couplings indices: [0 2]
+    Bad couplings values:  [-1 -3]
+    All velocity values must be >=0
+    Bad velocities indices: [0 1]
+    Bad velocities values:  [-9 -8]
 
     Validating all inputs (INVALID: incompatible shapes)
-    >>> CCqo102.validateParameters(velocities = [4,5,6,7], couplings = [1,2,3])
+    >>> validateParameters(velocities = [4,5,6,7], couplings = [1,2,3])
+    Traceback (most recent call last):
+        ...
+    ValueError: operands could not be broadcast together with shapes (3,) (4,) 
+    Same shape required:
+      couplings shape  = (3,)
+      velocities shape = (4,)
+
     """
+    lgr = logging.getLogger('__main__')
+
     # Log the inputs
-    msg = ''
-    msg+= 'Inputs for validation:' + os.linesep
+    msg = ""
+    msg+= "Inputs for validation:" + os.linesep
     for k, v in sorted(kwargs.items()) :
         msg+= "  {} = {}".format(k,v) + os.linesep
     lgr.debug(msg)
@@ -189,8 +225,8 @@ def validateParameters(**kwargs):
         if any(C < 0 for C in _couplings):
             badIdx = np.where(_couplings < 0)
             eMsg+= "All coupling values must be >=0" + os.linesep
-            eMsg+= "Bad indices: {}".format(badIdx[0]) + os.linesep
-            eMsg+= "Bad values:  {}".format(_couplings[badIdx]) + os.linesep
+            eMsg+= "Bad couplings indices: {}".format(badIdx[0]) + os.linesep
+            eMsg+= "Bad couplings values:  {}".format(_couplings[badIdx])
             err=True
 
     # velocities
@@ -202,10 +238,11 @@ def validateParameters(**kwargs):
         _velocities = np.asarray(_velocities)
         # range-check: _velocities >= 0
         if any(v < 0 for v in _velocities):
+            if err: eMsg+= os.linesep
             badIdx = np.where(_velocities < 0)
-            eMsg+= "All _velocities values must be >=0" + os.linesep
-            eMsg+= "Bad indices: {}".format(badIdx[0]) + os.linesep
-            eMsg+= "Bad values:  {}".format(_velocities[badIdx]) + os.linesep
+            eMsg+= "All velocity values must be >=0" + os.linesep
+            eMsg+= "Bad velocities indices: {}".format(badIdx[0]) + os.linesep
+            eMsg+= "Bad velocities values:  {}".format(_velocities[badIdx])
             err=True
 
     # couplings and velocities
@@ -214,20 +251,19 @@ def validateParameters(**kwargs):
         try:
             # Test if inputs can be broadcast together
             _couplings * _velocities
-            print("c*v={}".format(_couplings*_velocities))
         except ValueError as e:
+            if err: eMsg+= os.linesep
             eMsg+= str(e) + os.linesep
             eMsg+= "Same shape required:" + os.linesep
-            eMsg+= "  _couplings shape  = {}".format(_couplings.shape) + os.linesep
-            eMsg+= "  _velocities shape = {}".format(_velocities.shape) + os.linesep
+            eMsg+= "  couplings shape  = {}".format(_couplings.shape) + os.linesep
+            eMsg+= "  velocities shape = {}".format(_velocities.shape)
             err=True
 
     # Log and raise as appropriate
     if err and wrn:
         lgr.warn(wMsg)
         lgr.error(eMsg)
-        exMsg = wMsg + os.linesep + eMsg
-        raise ValueError(exMsg)
+        raise ValueError(wMsg + os.linesep + eMsg)
     elif err:
         lgr.error(eMsg)
         raise ValueError(eMsg)
@@ -237,9 +273,11 @@ def validateParameters(**kwargs):
 
 
 
+
 def appl_setupLog(level=logging.WARNING, 
                   msgFmt='%(asctime)s %(levelname)s [%(module)s:%(funcName)s] %(message)s', 
-                  logFile=None):
+                  logFile=None,
+                  chgLevelOnly=False):
     """Set up logging level, format, and output file.
 
     Log to STDOUT at the given 'level' in a certain 'msgFmt', and optionally write to 'logFile'. 
@@ -256,6 +294,10 @@ def appl_setupLog(level=logging.WARNING,
     logFile : string
         Filename in a writable location.  Value of None means log entries
         will not be written to a file. (Default=None)
+    chgLevelOnly : boolean
+        Indicate if this is to change the logging level only. False means
+        that *all* inputs are acted on, especially adding
+        handlers. (Default=False)
 
     Returns
     -------
@@ -271,20 +313,24 @@ def appl_setupLog(level=logging.WARNING,
 
     Examples
     --------
-    >>> # Setup for examples
-    >>> import CCqo102_ring_damping as emr
-    >>> import logging
+    # Setup for examples
+    >>> import logging # doctest: +SKIP
 
-    >>> # Warning messages and above go to STDOUT with datetime+level prefix.
-    >>> emr.appl_setupLog()
+    # Warning messages and above go to STDOUT with datetime+level prefix.
+        appl_setupLog()
 
-    >>> # Info messages and above go to STDOUT with datetime+name+level prefix.
-    >>> emr.appl_setupLog(level=logging.INFO)
+    # Info messages and above go to STDOUT with datetime+name+level prefix.
+        appl_setupLog(level=logging.INFO)
 
-    >>> # Debug messages and above go to STDOUT and the file thisLog.txt with
-    >>> # a log level prefix to the message (no datetime in the prefix)
-    >>> emr.appl_setupLog(level=logging.DEBUG, msgFmt='%(levelname)s %(message)s', logFile='thisLog.txt')
+    # Debug messages and above go to STDOUT and the file thisLog.txt with
+    # a log level prefix to the message (no datetime in the prefix)
+        appl_setupLog(level=logging.DEBUG, msgFmt='%(levelname)s %(message)s', logFile='thisLog.txt')
+
     """
+
+    if chgLevelOnly:
+        lgr.setLevel(level)
+        return
 
     formatter = logging.Formatter(msgFmt)
 
@@ -347,23 +393,17 @@ def calc_ring_damping(couplings, velocities):
 
     Examples
     --------
-    Setup for examples
-      >>> import CCqo102_ring_damping as emrQO102
+    >>> # Single-channel damping
+    >>> calc_ring_damping(12.0,3.0)
+    (24.0, 24.0)
 
-    Single-channel damping
-      >>> total_damping, path_dampings = emrQO102.calc_ring_damping(8.0,2.0)
-      >>> total_damping, path_dampings
-      (16.0, 16.0)
+    >>> # Multi-channel damping with different channel parameters
+    >>> calc_ring_damping([12.0, 20.0],[3.0, 4.0])
+    (74.0, array([ 24.,  50.]))
 
-    Multi-channel damping with different channel parameters
-      >>> total_damping, path_dampings = emrQO102.calc_ring_damping([8.0, 12.0],[2.0, 4.0])
-      >>> total_damping, path_dampings
-      (34.0, array([ 16.,  18.]))
-
-    Multi-channel damping with the same channel parameters (one input must be multiple)
-      >>> total_damping, path_dampings = emrQO102.calc_ring_damping([8.0, 8.0], 2.0)
-      >>> total_damping, path_dampings
-      (32.0, array([ 16.,  16.])) 
+    >>> # Multi-channel damping with the same channel parameters (one input must be multiple)
+    >>> calc_ring_damping([12.0, 20.0], 2.0)
+    (136.0, array([  36.,  100.]))
 
     """
 
@@ -387,9 +427,7 @@ def calc_ring_damping(couplings, velocities):
 
 
 
-
-
-
+# Command-line main
 if '__main__' == __name__:
 
     import argparse
@@ -402,53 +440,80 @@ if '__main__' == __name__:
     #  - Help option (-h, --help) included by default 
     #  - Usage statement included by default
     argp = argparse.ArgumentParser(
-        description='Reshape a piece of pi',
-        epilog='Unambiguous option abbreviations are permitted.')
+        description='Compute ring damping from one or more coupling points',
+        epilog='Unambiguous option abbreviations are permitted.',
+        add_help=False,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+        argument_default=argparse.SUPPRESS)
+    # Instantiate required, optional, and informational arguments group
+    reqArgs = argp.add_argument_group("Required arguments")
+    optArgs = argp.add_argument_group("Optional arguments")
+    infArgs = argp.add_argument_group("Informational arguments")
+
     # Add options
     # ===========
 
-    argp.add_argument(
-        '--CHGTHISVAR', 
+    reqArgs.add_argument(
+        '--couplings', 
         type=float, required=True,
-        dest='chgthisvar', action='store',
-        help="chgVar [m]",
-        metavar='cV'
+        nargs='+',
+        dest='couplings', action='store',
+        help="couplings [(rad s^{-1})^{-1/2}]",
+        metavar='C'
         )
 
-    argp.add_argument(
+    reqArgs.add_argument(
+        '--velocities', 
+        type=float, required=True,
+        nargs='+',
+        dest='velocities', action='store',
+        help="velocities [rad s^{-1}]",
+        metavar='V'
+        )
+
+    optArgs.add_argument(
         '--validate', 
         dest='validate', action='store_true',
         help="Validate parameters"
         )
-    argp.add_argument(
+    optArgs.add_argument(
         '--no-validate',
         default=False,
         dest='validate', action='store_false',
         help="Do not validate parameters"
         )
 
-    argp.add_argument(
+    optArgs.add_argument(
         '--log-file', 
         default='CCqo102_ring_damping.log',
         dest='log_file', action='store',
         help="File for log messages",
         metavar = 'logFilename')
-    argp.add_argument(
+
+    optArgs.add_argument(
         '--log-entry-format', 
         default='%(asctime)s %(levelname)s [%(filename)s:%(funcName)s] %(message)s',
         dest='log_entry_format', action='store',
         help="Formate for log messages",
         metavar = 'msgFmt')
-    argp.add_argument(
+
+    infArgs.add_argument(
         '-v', '--verbose', 
+        default=0, 
         dest='verbose', action='count',
         help="Increase verbosity (-v=WARNING, -vv=INFO, -vvv=DEBUG, -vvv(v+)=DEBUG)")
 
     vMsg = '%s version %s'%(__file__, __version__)
-    argp.add_argument(
+    infArgs.add_argument(
         '--Version', 
         action='version', version=vMsg,
         help="Print version and exit"
+        )
+    # help
+    infArgs.add_argument(
+        '-h', '--help', 
+        action='help', 
+        help="Show usage and exit"
         )
 
     # Parse options and instantiate object
@@ -464,14 +529,14 @@ if '__main__' == __name__:
         logLevel = levelTranslation[verbosity]
 
     appl_setupLog(logLevel, args.log_entry_format, args.log_file)
-    lgr.debug('Inputs and Defaults: ' + pp.pformat(args))
+    lgr.debug('Inputs and Defaults: ' + os.linesep + pp.pformat(args.__dict__)) 
 
     # Act
     try:
 
         if args.validate:
             try:
-                emr.validateParameters(CHGTHISVAR=args.chgthisvar)
+                emr.validateParameters(couplings=args.couplings, velocities=args.velocities)
             except RuntimeWarning as e:
                 msg = 'Dubious inputs for CCqo102_ring_damping.'
                 lgr.warn(str(e))
@@ -485,12 +550,12 @@ if '__main__' == __name__:
                 lgr.error(msg)
                 raise
 
-        [final, piece] = emr.calc_ring_damping(CHGTHISVAR=args.chgthisvar)
+        damping, path_losses = emr.calc_ring_damping(couplings=args.couplings, velocities=args.velocities)
         msg = ''
         msg += ' CCqo102_ring_damping outputs' + os.linesep
-        msg += '  finC [s m^-1] = %f'%(final) + os.linesep
-        msg += '  intrmdB [J m] = %f'%(piece)
-        if lgr.getEffectiveLevel() > logging.INFO: print(finC)
+        msg += '  damping [1] = {}'.format(damping) + os.linesep
+        msg += '  path_losses [1] = {}'.format(path_losses)
+        if lgr.getEffectiveLevel() > logging.INFO: print(damping)
         else: lgr.info(msg)
 
     except Exception:
