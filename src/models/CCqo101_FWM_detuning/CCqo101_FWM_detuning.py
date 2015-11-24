@@ -8,12 +8,19 @@ between the input and output frequencies.
 
 Command-line examples
 =====================
-
+Getting help
+------------
 Obtain the usage statement::
   python CCqo101_FWM_detuning.py --help
+
 Obtain programmer-level documentation::
   pydoc CCqo101_FWM_detuning
 
+Execute module tests that are embedded in docstrings (verbose)
+  python -m doctest -v CCqo101_FWM_detuning.py 
+
+Calculations
+------------
 Compute detuning parameter using only required parameters::
   python CCqo101_FWM_detuning.py --pump1 1.22e15 --signal 1.92e15
 Compute detuning parameter using all calculation parameters::
@@ -21,6 +28,8 @@ Compute detuning parameter using all calculation parameters::
 Same calculation, but showing that unambiguous abbreviations are permissible::
   python CCqo101_FWM_detuning.py --pump1 1.22e15 --sig 1.92e15 --pump2 1.00e15 --idl 2.00e15
 
+Calculations with options
+-------------------------
 Validate parameters (error for negative input)::
   python CCqo101_FWM_detuning.py ---pump1 1.22e15 --s 1.92e15 --validate
 Change the log level (debug) and refrain from validation::
@@ -59,10 +68,12 @@ HISTORY
     * Fixed bug brought on by suppressing default argument creation
 1.0.2 [01 Oct 2015 : Timothy C. Burt]
     * Fixed version (that's going to be a pain!)
+1.0.3 [24 Nov 2015 : Timothy C. Burt]
+    * Made doctest-ready docstrings.  Format updates to docstrings in general.
 
 """
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 __copyright__ = "Timothy C. Burt"
 __author__ = "TC Burt"
@@ -151,8 +162,20 @@ def validateParameters(**kwargs):
     Examples
     --------
     Setup for examples
-    >>> import CCqo101_FWM_detuning as CCqo101
-    >>> CCqo101.validateParameters(pump1=-1)
+    >>> import logging
+    >>> appl_setupLog(level=logging.CRITICAL)
+
+    Validate all required arguments (VALID)
+    >>> validateParameters(pump1=1, signal=3.0)
+
+    Validate all required arguments (INVALID)
+    >>> validateParameters(pump1=1, signal=-3.0)
+    Traceback (most recent call last):
+        ...
+    ValueError: Range check error:
+      Expected signal >= 0
+      Received signal = -3.0
+
     """
 
     from collections import OrderedDict
@@ -165,9 +188,8 @@ def validateParameters(**kwargs):
     # Log the inputs
     msg = ''
     msg += 'Inputs for validation:' + os.linesep
-    print(kwargs)
     for k,v in kwargs.items():
-        msg+= "  k = {}".format(v) + os.linesep
+        msg+= "  {} = {}".format(k, v) + os.linesep
     lgr.debug(msg)
 
     # Set flag variables and messages for errors (err, eMsg) and warnings (wrn, wMsg)
@@ -181,11 +203,15 @@ def validateParameters(**kwargs):
     checkGEzero = OrderedDict([("pump1", pump1), ("pump2", pump2), ("signal", signal), ("idler", idler)])
     for k,v in checkGEzero.items():
         if v and (v < 0):
+            #if err: eMsg+= os.linesep
             eMsg+= "Range check error:" + os.linesep
             eMsg+= "  Expected {} >= 0".format(k) + os.linesep
-            eMsg+= "  Received {} = {}".format(k,v) + os.linesep
+            eMsg+= "  Received {} = {}".format(k,v)
             err=True
 
+    # Remove trailing newline
+    wMsg.rstrip()
+    eMsg.rstrip()
     if err and wrn:   
         lgr.warn(wMsg)   
         lgr.error(eMsg)
@@ -197,9 +223,11 @@ def validateParameters(**kwargs):
         lgr.error(eMsg)
         raise ValueError(eMsg)
 
+
 def appl_setupLog(level=logging.WARNING, 
                   msgFmt='%(asctime)s %(levelname)s [%(module)s:%(funcName)s] %(message)s', 
-                  logFile=None):
+                  logFile=None,
+                  chgLevelOnly=False):
     """Set up logging level, format, and output file.
 
     Log to STDOUT at the given 'level' in a certain 'msgFmt', and optionally write to 'logFile'. 
@@ -216,6 +244,10 @@ def appl_setupLog(level=logging.WARNING,
     logFile : string
         Filename in a writable location.  Value of None means log entries
         will not be written to a file. (Default=None)
+    chgLevelOnly : boolean
+        Indicate if this is to change the logging level only. False means
+        that *all* inputs are acted on, especially adding
+        handlers. (Default=False)
 
     Returns
     -------
@@ -231,20 +263,24 @@ def appl_setupLog(level=logging.WARNING,
 
     Examples
     --------
-    >>> # Setup for examples
-    >>> import CCqo101_FWM_detuning as emr
-    >>> import logging
+    # Setup for examples
+    >>> import logging # doctest: +SKIP
 
-    >>> # Warning messages and above go to STDOUT with datetime+level prefix.
-    >>> emr.appl_setupLog()
+    # Warning messages and above go to STDOUT with datetime+level prefix.
+        appl_setupLog()
 
-    >>> # Info messages and above go to STDOUT with datetime+name+level prefix.
-    >>> emr.appl_setupLog(level=logging.INFO)
+    # Info messages and above go to STDOUT with datetime+name+level prefix.
+        appl_setupLog(level=logging.INFO)
 
-    >>> # Debug messages and above go to STDOUT and the file thisLog.txt with
-    >>> # a log level prefix to the message (no datetime in the prefix)
-    >>> emr.appl_setupLog(level=logging.DEBUG, msgFmt='%(levelname)s %(message)s', logFile='thisLog.txt')
+    # Debug messages and above go to STDOUT and the file thisLog.txt with
+    # a log level prefix to the message (no datetime in the prefix)
+        appl_setupLog(level=logging.DEBUG, msgFmt='%(levelname)s %(message)s', logFile='thisLog.txt')
+
     """
+
+    if chgLevelOnly:
+        lgr.setLevel(level)
+        return
 
     formatter = logging.Formatter(msgFmt)
 
@@ -299,17 +335,21 @@ def calcqo101_FWM_detuning(pump1, signal, pump2 = None, idler = None):
 
     Examples
     --------
-    # Setup for examples
-    >>> import CCqo101_FWM_detuning as emr
+    Setup
+    >>> appl_setupLog(level=1, chgLevelOnly=True)
 
-    # Positional call
-    >>> emr.calcqo101_FWM_detuning(100, 110)
+    Positional call
+    >>> calcqo101_FWM_detuning(100, 110)
+    20
 
-    # Keyword call (same as above)
-    >>> emr.calcqo101_FWM_detuning(signal=110, pump1=100)
+    Keyword call (same as above)
+    >>> calcqo101_FWM_detuning(signal=110, pump1=100)
+    20
 
-    # Mixed-style call (explicit values for optional arguments)
-    >>> emr.calcqo101_FWM_detuning(100, 110, pump2=230, idler=250)
+    Mixed-style call (explicit values for optional arguments)
+    >>> calcqo101_FWM_detuning(100, 110, pump2=230, idler=250)
+    30
+
     """
 
     # Set optional arguments if necessary

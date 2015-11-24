@@ -15,7 +15,7 @@ Obtain the usage statement::
 Obtain programmer-level documentation::
   pydoc CCqo102_ring_damping
 
-Execute module tests that are embedded in docstrings
+Execute module tests that are embedded in docstrings (verbose)
   python -m doctest CCqo102_ring_damping.py 
 
 Calculations
@@ -160,8 +160,9 @@ def validateParameters(**kwargs):
 
     Examples
     --------
-    Setup for examples (Use level=1 for DEBUG)
-    >>> appl_setupLog(level=5)
+    Setup for examples
+    >>> import logging
+    >>> appl_setupLog(level=logging.CRITICAL)
 
     Validating just couplings (VALID)
     >>> validateParameters(couplings = [1,2,3])
