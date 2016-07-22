@@ -7,3 +7,14 @@ Computations for physical concepts are coded in Python modules with names
 of the form CCqo<ddd>_<concept>.py where <ddd> is a number that is unique
 in the CCqo catalog of modules and <concept> is the particular concept
 being calculated.
+
+** Models
+*** CCqo103_spectral_pump
+
+** Development Notes
+*** TODO CCqo103_spectral_pump finalization [0/5]
+  - [ ] Document module
+  - [ ] Document valArrayTests()
+  - [ ] Document getInputs()
+  - [ ] Add doctests for validateParameters()
+  - [ ] Gather and run verification data
